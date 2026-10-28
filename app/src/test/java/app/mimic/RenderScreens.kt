@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.core.app.ApplicationProvider
 import androidx.compose.ui.test.onAllNodesWithText
+import app.mimic.data.Covers
 import app.mimic.data.DemoSeed
 import app.mimic.domain.Phase
 import app.mimic.domain.Sky
@@ -43,7 +44,21 @@ abstract class ScreensBase {
     private fun seed(): Pair<app.mimic.data.Settings, Map<String, Long>> = runBlocking {
         val app = ApplicationProvider.getApplicationContext<MimicApp>()
         DemoSeed.seedIfEmpty(app, app.container)
+        realCovers(app)
         app.container.settings.now() to app.container.db.games().list().associate { it.title to it.id }
+    }
+
+    /** The demo games' real covers from tools/demo_covers.py, when they've been downloaded. */
+    private suspend fun realCovers(app: MimicApp) {
+        val dir = File(System.getProperty("user.dir"), "build/demo-covers").takeIf { it.isDirectory } ?: return
+        val dao = app.container.db.games()
+        for (g in dao.list()) {
+            if (g.cover != null) continue
+            val en = RU_EN[g.title] ?: g.title
+            val f = File(dir, en.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_') + ".jpg").takeIf { it.exists() } ?: continue
+            val name = Covers.save(app, f.readBytes()) ?: continue
+            dao.update(g.copy(cover = name, color = Covers.art(app, name)?.dominant ?: g.color))
+        }
     }
 
     private fun shot(name: String, content: @Composable () -> Unit) {
@@ -79,6 +94,12 @@ abstract class ScreensBase {
     @Test fun sniff() = screen("6-sniff", Tab.ROOM) { Overlay.Sniff }
     @Test fun dig() = screen("7-dig", Tab.ROOM) { Overlay.Dig(null) }
 }
+
+private val RU_EN = mapOf(
+    "Ведьмак 3" to "The Witcher 3", "Каркассон" to "Carcassonne", "Терраформирование Марса" to "Terraforming Mars", "Диксит" to "Dixit",
+    "Кодовые имена" to "Codenames", "Ужас Аркхэма" to "Arkham Horror", "Взрывные котята" to "Exploding Kittens", "Крылья" to "Wingspan",
+    "Каскадия" to "Cascadia", "Остров кошек" to "Isle of Cats",
+)
 
 @Config(sdk = [34], qualifiers = "en-w411dp-h891dp-xxhdpi")
 class RenderScreensEn : ScreensBase() { override val lang = "en" }
