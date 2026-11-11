@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import app.mimic.BuildConfig
 import app.mimic.R
+import app.mimic.ui.components.Tip
+import app.mimic.ui.components.Tips
 import app.mimic.container
 import app.mimic.data.Settings
 import app.mimic.domain.Place
@@ -77,7 +79,7 @@ fun PlacePicker(onPicked: (Place) -> Unit) {
             Field(q, { q = it }, stringResource(R.string.place_search), Modifier.weight(1f), onDone = ::go)
             PixelButton(stringResource(R.string.search), ::go, small = true)
         }
-        if (failed) Text(stringResource(R.string.place_fail), style = T.Small.copy(color = C.crimL))
+        if (failed) Text(stringResource(R.string.place_fail), style = T.Small.copy(color = C.pink))
         for (p in results) Panel(Modifier.fillMaxWidth(), onClick = { results = emptyList(); q = p.name; focus.clearFocus(); onPicked(p) }) {
             Text(p.name, style = T.Body)
             Text(p.region, style = T.Small)
@@ -91,16 +93,17 @@ fun SettingsPage(s: Settings, nav: Nav) {
     val c = ctx.container
     fun open(url: String) { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     Page(stringResource(R.string.settings), nav::close) {
+        Tip(Tips.SETTINGS, s, stringResource(R.string.tip_settings))
         Section(stringResource(R.string.set_covers))
-        Text(stringResource(R.string.set_covers_hint), style = T.Small.copy(color = C.paperD))
+        Text(stringResource(R.string.set_covers_hint), style = T.Small.copy(color = C.sub))
         Flow {
             Chip(stringResource(R.string.set_covers_px), s.pixelCovers, { c.write { settings.update { it.copy(pixelCovers = true) } } }, dark = true)
             Chip(stringResource(R.string.set_covers_raw), !s.pixelCovers, { c.write { settings.update { it.copy(pixelCovers = false) } } }, dark = true)
         }
 
         Section(stringResource(R.string.set_window))
-        Text(s.place?.let { stringResource(R.string.place_now, it.name) } ?: stringResource(R.string.place_none), style = T.Body.copy(color = C.paper))
-        Text(stringResource(R.string.place_hint), style = T.Small.copy(color = C.paperD))
+        Text(s.place?.let { stringResource(R.string.place_now, it.name) } ?: stringResource(R.string.place_none), style = T.Body.copy(color = C.text))
+        Text(stringResource(R.string.place_hint), style = T.Small.copy(color = C.sub))
         PlacePicker { picked -> c.write { settings.update { it.copy(place = picked, outside = null) }; refreshWeather(force = true) } }
         Flow {
             Chip(stringResource(R.string.set_wx_live), s.liveWeather, { c.write { settings.update { it.copy(liveWeather = true) }; refreshWeather(force = true) } }, dark = true)
@@ -109,15 +112,15 @@ fun SettingsPage(s: Settings, nav: Nav) {
         if (s.place != null) PixelButton(stringResource(R.string.place_off), { c.write { settings.update { it.copy(place = null, outside = null) } } }, Modifier.fillMaxWidth(), kind = Kind.PALE, small = true)
 
         Section(stringResource(R.string.set_genres))
-        Text(stringResource(R.string.set_genres_hint), style = T.Small.copy(color = C.paperD))
+        Text(stringResource(R.string.set_genres_hint), style = T.Small.copy(color = C.sub))
         val styles by c.shelf.styles.collectAsStateWithLifecycle(initialValue = emptyList())
         var asking by remember { mutableStateOf<Long?>(null) }
-        if (styles.isEmpty()) Text(stringResource(R.string.set_genres_none), style = T.Body.copy(color = C.paper))
+        if (styles.isEmpty()) Text(stringResource(R.string.set_genres_none), style = T.Body.copy(color = C.text))
         for (st in styles.filter { it.top } + styles.filter { !it.top }) {
             val parent = st.parent?.let { stringResource(app.mimic.ui.sheets.genreName(it)) } ?: st.parentStyle?.let { id -> styles.firstOrNull { it.id == id }?.name }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text((if (parent != null) "$parent · " else "") + st.name, style = T.Body.copy(color = C.paper), modifier = Modifier.weight(1f))
-                Text(stringResource(if (asking == st.id) R.string.set_genre_sure else R.string.set_genre_del), style = T.Small.copy(color = if (asking == st.id) C.crimL else C.paperD),
+                Text((if (parent != null) "$parent · " else "") + st.name, style = T.Body.copy(color = C.text), modifier = Modifier.weight(1f))
+                Text(stringResource(if (asking == st.id) R.string.set_genre_sure else R.string.set_genre_del), style = T.Small.copy(color = if (asking == st.id) C.pink else C.sub),
                     modifier = Modifier.clickable { if (asking == st.id) { c.write { shelf.deleteStyle(st) }; asking = null } else asking = st.id }.padding(6.dp))
             }
         }
@@ -130,7 +133,7 @@ fun SettingsPage(s: Settings, nav: Nav) {
         }
 
         Section(stringResource(R.string.community))
-        Text(stringResource(R.string.community_text), style = T.Small.copy(color = C.paperD))
+        Text(stringResource(R.string.community_text), style = T.Small.copy(color = C.sub))
         for ((label, sub, url) in listOf(
             Triple(R.string.community_bug, R.string.community_bug_sub, Community.BUG),
             Triple(R.string.community_idea, R.string.community_idea_sub, Community.IDEA),
@@ -139,12 +142,12 @@ fun SettingsPage(s: Settings, nav: Nav) {
         )) Panel(Modifier.fillMaxWidth(), onClick = { open(url) }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text(stringResource(label), style = T.Body); Text(stringResource(sub), style = T.Small) }
-                Text("›", style = T.Heading.copy(color = C.crim))
+                Text("›", style = T.Heading.copy(color = C.pink))
             }
         }
 
         Section(stringResource(R.string.about))
-        Text(stringResource(R.string.about_text, BuildConfig.VERSION_NAME), style = T.Small.copy(color = C.paperD))
+        Text(stringResource(R.string.about_text, BuildConfig.VERSION_NAME), style = T.Small.copy(color = C.sub))
         PixelButton(stringResource(R.string.source), { open("https://github.com/bigdevwhale/mimic") }, kind = Kind.WOOD, small = true)
     }
 }

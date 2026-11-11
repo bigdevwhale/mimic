@@ -1,5 +1,6 @@
 package app.mimic.ui.book
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,17 +17,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.mimic.R
+import app.mimic.ui.components.Tip
+import app.mimic.ui.components.Tips
 import app.mimic.data.Kind
 import app.mimic.data.Status
 import app.mimic.data.dusty
 import app.mimic.ui.Home
+import app.mimic.ui.Nav
+import app.mimic.ui.postcard.Subject
 import app.mimic.ui.art.Buf
 import app.mimic.ui.art.Critters
 import app.mimic.ui.art.MimicArt
 import app.mimic.ui.art.MimicPose
 import app.mimic.ui.art.rememberTick
 import app.mimic.ui.components.BufImage
-import app.mimic.ui.components.pixelBox
+import app.mimic.ui.components.surface
 import app.mimic.ui.theme.C
 import app.mimic.ui.theme.T
 
@@ -34,7 +39,7 @@ private class Entry(val kind: Critters.Kind?, val name: Int, val note: Int, val 
 
 /** The bestiary: who lives in the room, met ones drawn, the rest as silhouettes with a hint. */
 @Composable
-fun BookScreen(h: Home) {
+fun BookScreen(h: Home, nav: Nav) {
     val tick = rememberTick()
     val f = tick / 5 % 2 == 1
     val seen = h.s.seen
@@ -52,21 +57,38 @@ fun BookScreen(h: Home) {
         Entry(Critters.Kind.MOTH, R.string.b_moth, R.string.b_moth_n, R.string.b_moth_h, false),
         Entry(Critters.Kind.DOUBLE, R.string.b_double, R.string.b_double_n, R.string.b_double_h, false),
     )
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp).fillMaxWidth().pixelBox(C.paper).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.tab_book), style = T.Display.copy(color = C.crim), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Text(stringResource(R.string.b_met, entries.count { it.known } + 1, entries.size + 1), style = T.Small, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-        Column(Modifier.fillMaxWidth().pixelBox(C.note, outline = C.paperD, bevel = null).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp).fillMaxWidth().surface(C.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(stringResource(R.string.tab_book), style = T.Display.copy(color = C.pink), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.b_met, entries.count { it.known } + 1, entries.size + 1), style = T.Tag, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        Tip(Tips.BOOK, h.s, stringResource(R.string.tip_book))
+        Column(Modifier.fillMaxWidth().surface(C.card2, outline = C.line, bevel = null).clickable { nav.postcard(Subject.Mimic) }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             BufImage(remember(h.mimic.stage, h.mimic.traits, f) { Buf(MimicArt.W, MimicArt.H).also { MimicArt.draw(MimicPose(h.mimic.stage, h.mimic.traits, gap = if (f) 7 else 8, wob = f), it) } }, scale = 2.dp)
             Text(stringResource(R.string.b_mimic), style = T.Heading)
-            Text(stringResource(R.string.b_mimic_n, h.mimic.eaten), style = T.Small.copy(color = C.ink), textAlign = TextAlign.Center)
+            Text(stringResource(R.string.b_mimic_n, h.mimic.eaten), style = T.Small.copy(color = C.text), textAlign = TextAlign.Center)
         }
         for (pair in entries.chunked(2)) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            for (e in pair) Column(Modifier.weight(1f).pixelBox(C.note, outline = C.paperD, bevel = null).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                BufImage(remember(e.kind, e.known, f) { Critters.portrait(e.kind!!, f, e.known) }, scale = 3.dp)
-                Text(if (e.known) stringResource(e.name) else "???", style = T.Heading.copy(color = if (e.known) C.ink else C.muted))
+            for (e in pair) Column(Modifier.weight(1f).surface(C.card2, outline = C.line, bevel = null).then(if (e.known) Modifier.clickable { nav.postcard(Subject.Creature(e.kind!!)) } else Modifier).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                BufImage(remember(e.kind, e.known, f) { Critters.portrait(e.kind!!, f, e.known) }, scale = 2.dp)
+                Text(if (e.known) stringResource(e.name) else "???", style = T.Heading.copy(color = if (e.known) C.text else C.sub))
                 Text(stringResource(if (e.known) e.note else e.hint), style = T.Small)
             }
             if (pair.size == 1) Column(Modifier.weight(1f)) {}
         }
     }
+}
+
+/** A creature's name and its bestiary note. */
+fun creatureText(k: Critters.Kind): Pair<Int, Int> = when (k) {
+    Critters.Kind.DUST -> R.string.b_dust to R.string.b_dust_n
+    Critters.Kind.WISP -> R.string.b_wisp to R.string.b_wisp_n
+    Critters.Kind.MEEPLE -> R.string.b_meeple to R.string.b_meeple_n
+    Critters.Kind.GHOST -> R.string.b_ghost to R.string.b_ghost_n
+    Critters.Kind.DICE -> R.string.b_dice to R.string.b_dice_n
+    Critters.Kind.CROW -> R.string.b_crow to R.string.b_crow_n
+    Critters.Kind.MERCHANT -> R.string.b_merchant to R.string.b_merchant_n
+    Critters.Kind.GOBLIN -> R.string.b_goblin to R.string.b_goblin_n
+    Critters.Kind.ELDER -> R.string.b_elder to R.string.b_elder_n
+    Critters.Kind.SLIME -> R.string.b_slime to R.string.b_slime_n
+    Critters.Kind.MOTH -> R.string.b_moth to R.string.b_moth_n
+    Critters.Kind.DOUBLE -> R.string.b_double to R.string.b_double_n
 }

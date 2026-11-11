@@ -40,7 +40,7 @@ import app.mimic.ui.components.Flow
 import app.mimic.ui.components.Kind
 import app.mimic.ui.components.PixelButton
 import app.mimic.ui.components.Plate
-import app.mimic.ui.components.pixelBox
+import app.mimic.ui.components.surface
 import app.mimic.ui.theme.C
 import app.mimic.ui.theme.T
 import kotlinx.coroutines.launch
@@ -80,7 +80,7 @@ fun GenrePicker(h: Home, kind: GameKind, genre: Genre, preset: String, style: Lo
     // The first dozen are what most people need; the rest open on request, and stay open if one of them is picked.
     var more by remember { mutableStateOf(picked != null && popular.indexOf(picked) >= 12) }
 
-    Text(stringResource(R.string.f_genre_kind, stringResource(kindName(kind)).let { k -> if (k == k.uppercase()) k else k.lowercase() }), style = T.Small.copy(color = C.ink))
+    Text(stringResource(R.string.f_genre_kind, stringResource(kindName(kind)).let { k -> if (k == k.uppercase()) k else k.lowercase() }), style = T.Small.copy(color = C.text))
     Flow {
         for (p in if (more) popular else popular.take(12)) Chip(p.name(h.ru), customTop == null && preset == p.key, { onPick(p.base, p.key, null); making = Making.NONE }, color = C.genre(p.base))
         if (!more && popular.size > 12) Chip(stringResource(R.string.genre_more, popular.size - 12), false, { more = true })
@@ -91,20 +91,20 @@ fun GenrePicker(h: Home, kind: GameKind, genre: Genre, preset: String, style: Lo
     val traitNow = if (customTop != null) (sub?.trait ?: customTop.trait) else (sub?.trait ?: genre.trait)
     Text(stringResource(R.string.trait_line, traitNow?.let { stringResource(traitName(it)) } ?: stringResource(R.string.trait_none)), style = T.Small)
     val subs = h.genres.subsOf(if (customTop == null) genre else null, customTop)
-    Text(stringResource(R.string.f_sub), style = T.Small.copy(color = C.ink))
+    Text(stringResource(R.string.f_sub), style = T.Small.copy(color = C.text))
     Flow {
         Chip(stringResource(R.string.sub_none), sub == null, { onPick(genre, if (customTop == null) preset else "", customTop?.id); making = Making.NONE })
         for (s in subs) Chip(s.name, sub?.id == s.id, { onPick(genre, if (customTop == null) preset else "", s.id); making = Making.NONE })
         Chip(stringResource(R.string.sub_new), making == Making.SUB, { making = Making.SUB; name = "" })
     }
-    if (making != Making.NONE) Column(Modifier.fillMaxWidth().pixelBox(C.note, outline = C.paperD, bevel = null).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (making != Making.NONE) Column(Modifier.fillMaxWidth().surface(C.card2, outline = C.line, bevel = null).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val forGenre = making == Making.GENRE
         Text(stringResource(if (forGenre) R.string.genre_new_title else R.string.sub_new_title, customTop?.name ?: picked?.name(h.ru) ?: stringResource(genreName(genre))), style = T.Body)
         Field(name, { name = it }, stringResource(if (forGenre) R.string.genre_name_hint else R.string.sub_name_hint))
         if (forGenre) {
             Text(stringResource(R.string.genre_color), style = T.Small)
             Flow {
-                for (sw in SWATCHES) Box(Modifier.size(30.dp).background(Color(sw)).border(if (sw == color) 3.dp else 1.dp, C.ink).clickable { color = sw })
+                for (sw in SWATCHES) Box(Modifier.size(30.dp).background(Color(sw)).border(if (sw == color) 3.dp else 1.dp, C.text).clickable { color = sw })
             }
             Text(stringResource(R.string.genre_trait), style = T.Small)
             Flow {

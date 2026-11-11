@@ -15,7 +15,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val t = android.graphics.Color.TRANSPARENT
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(t), navigationBarStyle = SystemBarStyle.dark(t))
+        // Dark icons over the light plastic on top; light ones over the dark bar of tabs below.
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.light(t, t), navigationBarStyle = SystemBarStyle.dark(t))
         setContent {
             val settings: Settings? by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
             // Wait for settings so the welcome doesn't flash for someone already here.

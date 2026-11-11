@@ -42,7 +42,7 @@ import app.mimic.ui.components.Field
 import app.mimic.ui.components.Flow
 import app.mimic.ui.components.Kind
 import app.mimic.ui.components.PixelButton
-import app.mimic.ui.components.pixelBox
+import app.mimic.ui.components.surface
 import app.mimic.ui.theme.C
 import app.mimic.ui.theme.T
 import java.time.Instant
@@ -77,9 +77,9 @@ fun SessionForm(d: SessionDraft, noteLabel: Int, noteHint: Int) {
         if (ok && f != null && f.length() > 0) Shots.saveFile(ctx, f)?.let { d.shots.add(it) }
         f?.delete(); pending = null
     }
-    Text(stringResource(R.string.s_long), style = T.Small.copy(color = C.ink))
+    Text(stringResource(R.string.s_long), style = T.Small.copy(color = C.text))
     Flow { for (m in MINUTES) Chip(if (m == 180) minutesText(m, ctx.ru) + "+" else minutesText(m, ctx.ru), d.minutes == m, { d.minutes = m }) }
-    Text(stringResource(noteLabel), style = T.Small.copy(color = C.ink))
+    Text(stringResource(noteLabel), style = T.Small.copy(color = C.text))
     Field(d.note, { d.note = it }, stringResource(noteHint), single = false)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PixelButton(stringResource(R.string.s_camera), {
@@ -100,7 +100,7 @@ fun ShotRow(names: List<String>, onOpen: (String) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (n in names) {
             val bmp = remember(n) { Shots.bitmap(ctx, n, 240)?.asImageBitmap() } ?: continue
-            Image(bmp, null, Modifier.size(96.dp, 64.dp).pixelBox(C.ink, bevel = null, lip = null).padding(2.dp).clickable { onOpen(n) }, contentScale = ContentScale.Crop)
+            Image(bmp, null, Modifier.size(96.dp, 64.dp).surface(C.text, bevel = null, lip = null).padding(2.dp).clickable { onOpen(n) }, contentScale = ContentScale.Crop)
         }
     }
 }
@@ -112,10 +112,10 @@ fun SessionList(list: List<Session>, onOpen: (String) -> Unit, onDelete: (Sessio
     val fmt = remember { DateTimeFormatter.ofPattern("d MMM yyyy", if (ctx.ru) Locale.forLanguageTag("ru") else Locale.ENGLISH) }
     var asking by remember { mutableStateOf<Long?>(null) }
     for (s in list) {
-        Column(Modifier.fillMaxWidth().pixelBox(C.paper, outline = C.paperD, bevel = null).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.fillMaxWidth().surface(C.card, outline = C.line, bevel = null).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(listOf(fmt.format(Instant.ofEpochMilli(s.at).atZone(ZoneId.systemDefault())), minutesText(s.minutes, ctx.ru)).filter { it.isNotBlank() }.joinToString(" · "), style = T.Small, modifier = Modifier.weight(1f))
-                Text(stringResource(if (asking == s.id) R.string.s_delete_sure else R.string.s_delete), style = T.Small.copy(color = if (asking == s.id) C.crim else C.muted),
+                Text(stringResource(if (asking == s.id) R.string.s_delete_sure else R.string.s_delete), style = T.Small.copy(color = if (asking == s.id) C.pink else C.sub),
                     modifier = Modifier.clickable { if (asking == s.id) onDelete(s) else asking = s.id }.padding(4.dp))
             }
             if (s.note.isNotBlank()) Text(s.note, style = T.Body)
@@ -130,7 +130,7 @@ fun ShotViewer(name: String, onClose: () -> Unit) {
     val ctx = LocalContext.current
     BackHandler(onBack = onClose)
     val bmp = remember(name) { Shots.bitmap(ctx, name, 2000)?.asImageBitmap() }
-    Box(Modifier.fillMaxSize().background(Color(0xF0100806)).clickable(remember { MutableInteractionSource() }, null, onClick = onClose), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xF00E0B18)).clickable(remember { MutableInteractionSource() }, null, onClick = onClose), contentAlignment = Alignment.Center) {
         if (bmp != null) Image(bmp, null, Modifier.fillMaxWidth().padding(8.dp), contentScale = ContentScale.Fit)
     }
 }

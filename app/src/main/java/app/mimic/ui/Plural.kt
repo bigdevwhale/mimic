@@ -14,6 +14,7 @@ object Plural {
     fun months(n: Int, ru: Boolean) = if (ru) ru(n, "месяц", "месяца", "месяцев") else en(n, "month")
     fun years(n: Int, ru: Boolean) = if (ru) ru(n, "год", "года", "лет") else en(n, "year")
     fun games(n: Int, ru: Boolean) = if (ru) ru(n, "игра", "игры", "игр") else en(n, "game")
+    fun sessions(n: Int, ru: Boolean) = if (ru) ru(n, "сессия", "сессии", "сессий") else en(n, "session")
 
     /** A length of days: days under two months, then months, then years and months. */
     fun span(days: Int, ru: Boolean): String = when {

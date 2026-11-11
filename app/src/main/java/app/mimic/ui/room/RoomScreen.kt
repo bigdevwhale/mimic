@@ -1,5 +1,9 @@
 package app.mimic.ui.room
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -61,6 +65,7 @@ import app.mimic.ui.components.BufImage
 import app.mimic.ui.components.Kind
 import app.mimic.ui.components.PixelButton
 import app.mimic.ui.components.sayBox
+import app.mimic.ui.components.bezel
 import app.mimic.ui.components.tray
 import app.mimic.ui.look
 import app.mimic.ui.tint
@@ -106,7 +111,7 @@ fun RoomScreen(h: Home, nav: Nav) {
         // The room grows taller (more floor) to fill the space instead of leaving bands around it.
         val artH = ((maxHeight - 6.dp) / (maxWidth - 6.dp) * RoomScene.W).toInt().coerceIn(RoomScene.BASE_H, RoomScene.MAX_H)
         val scene = remember(sceneModel, artH) { RoomScene(sceneModel, artH) }
-        Box(Modifier.tray().padding(3.dp)) {
+        Box(Modifier.bezel().padding(6.dp)) {
             PixelCanvas(RoomScene.W, artH, Modifier.pointerInput(scene) {
                 detectTapGestures { o ->
                     val x = o.x / size.width * RoomScene.W
@@ -178,22 +183,22 @@ fun RoomScreen(h: Home, nav: Nav) {
             Bubble(h, Modifier.align(Alignment.BottomCenter).padding(8.dp))
         }
         }
-        WeatherLine(h)
+        WeatherLine(h) { nav.postcard(app.mimic.ui.postcard.Subject.Room) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PixelButton(stringResource(R.string.sniff), nav::sniff, Modifier.weight(1f), Kind.CRIM, small = true)
             PixelButton(stringResource(R.string.dig), { nav.dig(null) }, Modifier.weight(1f), Kind.BRASS, small = true)
             PixelButton(stringResource(R.string.add_game), nav::add, Modifier.weight(1f), Kind.PALE, small = true)
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(R.string.in_hands), style = T.Small.copy(color = C.brass))
-            Text("  " + stringResource(R.string.hands_n, h.hands.size, Shelf.HANDS), style = T.Small.copy(color = C.paperD))
+            Text(stringResource(R.string.in_hands), style = T.Tag.copy(color = C.neon))
+            Text("  " + stringResource(R.string.hands_n, h.hands.size, Shelf.HANDS), style = T.Tag.copy(color = C.sub))
         }
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (i in 0 until Shelf.HANDS) {
                 val g = h.hands.getOrNull(i)
                 if (g == null) {
                     Box(Modifier.weight(1f).fillMaxHeight().heightIn(min = 64.dp).tray().clickable { nav.shelf("pile") }.padding(6.dp), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.slot_free), style = T.Small.copy(color = C.paperD), textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.slot_free), style = T.Small.copy(color = C.sub), textAlign = TextAlign.Center)
                     }
                     continue
                 }
@@ -202,7 +207,7 @@ fun RoomScreen(h: Home, nav: Nav) {
                         Box(Modifier.padding(top = 6.dp)) { CoverImage(g, h.s.pixelCovers, 1.dp) }
                         BufImage(Critters.wisp((tick + i) % 4 < 2), Modifier.offset(y = (-6).dp), scale = 2.dp)
                     }
-                    Text(g.title, style = T.Small.copy(color = C.paper), maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
+                    Text(g.title, style = T.Small.copy(color = C.text), maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }
@@ -220,16 +225,16 @@ private fun Bubble(h: Home, modifier: Modifier) {
     LaunchedEffect(stamp) { start = tick; hidden = false }
     if (text.isEmpty() || hidden) return
     val shown = ((tick - start) * 3).coerceAtMost(text.length)
-    val gone = !Art.still && tick - start > 40 + text.length / 2
+    val gone = !Art.still && tick - start > 40 + text.length
     if (gone) return
     Column(modifier.fillMaxWidth().sayBox().clickable { hidden = true }.padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Text(stringResource(R.string.mimic_caps), style = T.Small.copy(color = C.crim))
+        Text(stringResource(R.string.mimic_caps), style = T.Tag.copy(color = C.pink))
         Text(if (Art.still) text else text.take(shown), style = T.Say)
     }
 }
 
 @Composable
-private fun WeatherLine(h: Home) {
+private fun WeatherLine(h: Home, onPostcard: () -> Unit) {
     val o = h.s.outside
     val parts = buildList {
         h.s.place?.name?.takeIf { it.isNotBlank() }?.let { add(it) }
@@ -237,7 +242,10 @@ private fun WeatherLine(h: Home) {
         add(stringResource(wxName(h.wx)))
         add(stringResource(phaseName(h.phase)))
     }
-    Text(parts.joinToString(" · "), style = T.Small.copy(color = C.paperD), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("✉ " + stringResource(R.string.pc_title), style = T.Tag.copy(color = C.neon), modifier = Modifier.clickable(onClick = onPostcard).padding(end = 12.dp, top = 2.dp, bottom = 2.dp))
+        Text(parts.joinToString(" · "), style = T.Tag.copy(color = C.sub), modifier = Modifier.weight(1f), textAlign = TextAlign.End, maxLines = 1)
+    }
 }
 
 fun wxName(w: Wx) = when (w) {
@@ -252,12 +260,16 @@ fun phaseName(p: Phase) = when (p) { Phase.NIGHT -> R.string.ph_night; Phase.DAW
 fun CoverImage(g: app.mimic.data.Game, pixel: Boolean, scale: androidx.compose.ui.unit.Dp) {
     val ctx = LocalContext.current
     val look = remember(g.id, g.cover, g.color, g.box, g.genre, g.status) { g.look(ctx) }
-    val frame = remember(look, pixel) { Boxes.cover(look, plain = false) }
-    if (pixel || look.art == null) { BufImage(frame, scale = scale); return }
-    val a = Boxes.artRect(g.box)
-    Box {
-        BufImage(frame, scale = scale)
-        val plain = remember(look) { look.art.plain(a[2] * 4, a[3] * 4) }
-        BufImage(plain, Modifier.offset(x = scale * a[0], y = scale * a[1]), scale = scale / 4, smooth = true)
+    if (pixel) { BufImage(remember(look) { Boxes.cover(look, plain = false) }, scale = scale); return }
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(scale * 4)
+    val m = Modifier.size(scale * 40, scale * 48).clip(shape)
+    val art = look.art
+    if (art != null) {
+        BufImage(remember(art) { art.plain(160, 192) }, m.border(1.dp, C.line, shape), scale = scale / 4, smooth = true)
+    } else {
+        val tint = androidx.compose.ui.graphics.Color(g.tint() or 0xFF000000.toInt())
+        Box(m.background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(tint, C.bgD))).border(1.dp, tint.copy(alpha = .6f), shape), contentAlignment = Alignment.Center) {
+            Text(g.title.take(1).uppercase(), style = T.Display.copy(color = androidx.compose.ui.graphics.Color.White.copy(alpha = .9f), fontSize = (scale.value * 22).sp))
+        }
     }
 }

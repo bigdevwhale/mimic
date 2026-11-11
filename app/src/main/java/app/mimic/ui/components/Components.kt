@@ -3,6 +3,19 @@ package app.mimic.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarOutline
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,50 +79,36 @@ import app.mimic.ui.theme.C
 import app.mimic.ui.theme.T
 import kotlin.math.roundToInt
 
-/** One "UI pixel": outlines, bevels and notched corners come in multiples of it. */
-val PX: Dp = 2.dp
+/** Corner radius of cards; controls use [SMALL_R]. */
+val CARD_R: Dp = 16.dp
+val SMALL_R: Dp = 12.dp
 
-/** A pixel box: an ink outline with notched corners, a fill, a light bevel on top and a darker lip below. */
-fun Modifier.pixelBox(fill: Color, outline: Color = C.ink, bevel: Color? = Color.White.copy(alpha = .4f), lip: Color? = Color(0x30200C08), pressed: Boolean = false): Modifier = drawBehind {
-    val p = PX.toPx()
-    val w = size.width
-    val h = size.height
-    drawRect(outline, Offset(p, 0f), Size(w - 2 * p, h))
-    drawRect(outline, Offset(0f, p), Size(w, h - 2 * p))
-    drawRect(fill, Offset(2 * p, p), Size(w - 4 * p, h - 2 * p))
-    drawRect(fill, Offset(p, 2 * p), Size(w - 2 * p, h - 4 * p))
-    if (!pressed) {
-        bevel?.let { drawRect(it, Offset(2 * p, p), Size(w - 4 * p, p)) }
-        lip?.let { drawRect(it, Offset(2 * p, h - 3 * p), Size(w - 4 * p, 2 * p)) }
-    }
+/**
+ * A dark glass surface: rounded, filled, with a hairline edge. [outline] tints the edge (a neon for
+ * emphasis); [pressed] dims it. [bevel] and [lip] are accepted for old callers and ignored.
+ */
+fun Modifier.surface(fill: Color, outline: Color = C.line, bevel: Color? = null, lip: Color? = null, pressed: Boolean = false, radius: Dp = CARD_R): Modifier {
+    val shape = RoundedCornerShape(radius)
+    return this.clip(shape).background(if (pressed) fill.copy(alpha = fill.alpha * .8f) else fill, shape).border(1.dp, outline.copy(alpha = .9f), shape)
 }
 
-/** The mimic's speech frame: ink outside, a crimson line inside. */
-fun Modifier.sayBox(fill: Color = C.paper): Modifier = drawBehind {
-    val p = PX.toPx()
-    val w = size.width
-    val h = size.height
-    drawRect(C.ink, Offset(p, 0f), Size(w - 2 * p, h))
-    drawRect(C.ink, Offset(0f, p), Size(w, h - 2 * p))
-    drawRect(fill, Offset(p, p), Size(w - 2 * p, h - 2 * p))
-    drawRect(C.crim, Offset(2 * p, 2 * p), Size(w - 4 * p, h - 4 * p))
-    drawRect(fill, Offset(3 * p, 3 * p), Size(w - 6 * p, h - 6 * p))
-}
+/** The mimic's speech: a card with the red button's edge. */
+fun Modifier.sayBox(fill: Color = C.card): Modifier = this.surface(fill, C.pink)
 
-/** A dark wooden tray for slots and tiles. */
-fun Modifier.tray(edge: Color = C.ink): Modifier = drawBehind {
-    val p = PX.toPx()
-    drawRect(edge)
-    drawRect(C.woodD, Offset(p, p), Size(size.width - 2 * p, size.height - 2 * p))
-    drawRect(C.woodL, Offset(p, p), Size(size.width - 2 * p, p))
-}
+/** A light tray for slots and tiles. */
+fun Modifier.tray(edge: Color = C.line): Modifier = surface(C.card, edge, radius = SMALL_R)
+
+/** The console's dark bezel around a screen. */
+fun Modifier.bezel(): Modifier = this
+    .drawBehind { drawRoundRect(Color.Black.copy(alpha = .12f), topLeft = Offset(0f, 4f), size = size, cornerRadius = CornerRadius(20.dp.toPx())) }
+    .surface(C.bezel, C.bezel, radius = 20.dp)
 
 @Composable
-fun Panel(modifier: Modifier = Modifier, fill: Color = C.paper, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp), content: @Composable ColumnScope.() -> Unit) {
+fun Panel(modifier: Modifier = Modifier, fill: Color = C.card, onClick: (() -> Unit)? = null, padding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 12.dp), content: @Composable ColumnScope.() -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     Column(
-        modifier.pixelBox(fill, pressed = pressed && onClick != null)
+        modifier.surface(fill, pressed = pressed && onClick != null)
             .then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick) else Modifier)
             .padding(padding),
         content = content,
@@ -120,56 +119,67 @@ fun Panel(modifier: Modifier = Modifier, fill: Color = C.paper, onClick: (() -> 
 @Composable
 fun Says(text: String, modifier: Modifier = Modifier, who: String? = null) {
     Column(modifier.fillMaxWidth().sayBox().padding(horizontal = 14.dp, vertical = 10.dp)) {
-        Text(who ?: stringResource(R.string.mimic_caps), style = T.Small.copy(color = C.crim))
+        Text(who ?: stringResource(R.string.mimic_caps), style = T.Tag.copy(color = C.pink))
         Text(text, style = T.Say)
     }
 }
 
+/** Button looks: the violet main action, the red big moment, a quiet outlined one, and a plain plastic one. */
 enum class Kind { BRASS, CRIM, PALE, WOOD }
 
 @Composable
 fun PixelButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, kind: Kind = Kind.BRASS, enabled: Boolean = true, small: Boolean = false) {
-    val (fill, ink, lip) = when (kind) {
-        Kind.BRASS -> Triple(C.brass, C.ink, C.brassD)
-        Kind.CRIM -> Triple(C.crim, C.paper, C.crimD)
-        Kind.PALE -> Triple(C.paper, C.ink, C.paperD)
-        Kind.WOOD -> Triple(C.woodL, C.paper, C.woodD)
+    // Each button sits on its own darker rim, like a pad's key; pressing pushes it down onto it.
+    val (fill, ink, rim) = when (kind) {
+        Kind.BRASS -> Triple(C.neon, C.onNeon, C.neonD)
+        Kind.CRIM -> Triple(C.pink, Color.White, C.pinkD)
+        Kind.PALE -> Triple(C.card, C.text, C.line)
+        Kind.WOOD -> Triple(C.bgL, C.text, Color(0xFFB9B4C8))
     }
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val a = if (enabled) 1f else .4f
+    val shape = RoundedCornerShape(SMALL_R)
+    val depth = if (small) 2.dp else 3.dp
     Box(
         modifier
-            .offset { IntOffset(0, if (pressed) PX.roundToPx() else 0) }
-            .pixelBox(fill.copy(alpha = a), C.ink, Color.White.copy(alpha = .35f * a), lip, pressed)
+            .padding(bottom = depth)
+            .drawBehind { drawRoundRect(rim.copy(alpha = a), topLeft = Offset(0f, depth.toPx()), size = size, cornerRadius = CornerRadius(SMALL_R.toPx())) }
+            .offset { IntOffset(0, if (pressed) depth.roundToPx() else 0) }
+            .clip(shape)
+            .background(fill.copy(alpha = a), shape)
+            .border(1.dp, rim.copy(alpha = .35f * a), shape)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-            .heightIn(min = if (small) 36.dp else 46.dp)
-            .padding(horizontal = if (small) 10.dp else 14.dp, vertical = if (small) 6.dp else 10.dp),
+            .heightIn(min = if (small) 34.dp else 46.dp)
+            .padding(horizontal = if (small) 12.dp else 16.dp, vertical = if (small) 6.dp else 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = (if (small) T.Small else T.Button).copy(color = ink.copy(alpha = a)), textAlign = TextAlign.Center, maxLines = 1)
+        Text(text, style = (if (small) T.Tag else T.Button).copy(color = ink.copy(alpha = a)), textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 
 /** A choice chip; [color] paints it as a genre plate when on. */
 @Composable
 fun Chip(text: String, on: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color? = null, dark: Boolean = false) {
-    val fill = when { on -> color ?: C.brass; dark -> C.woodL; else -> C.paperD }
-    val ink = when { on && color != null -> C.paper; on -> C.ink; dark -> C.paper; else -> C.ink }
-    Text(text, style = T.Small.copy(color = ink), maxLines = 1,
-        modifier = modifier.pixelBox(fill, bevel = null, lip = null).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 7.dp))
+    val fill = when { on -> color ?: C.neon; dark -> C.bgL; else -> C.card2 }
+    val ink = when { on && color != null -> Color.White; on -> C.onNeon; else -> C.text }
+    val shape = RoundedCornerShape(50)
+    Text(text, style = T.Tag.copy(color = ink), maxLines = 1,
+        modifier = modifier.clip(shape).background(fill, shape).border(1.dp, if (on) fill else C.line, shape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 7.dp))
 }
 
-/** A genre plate, like a type in an old field guide. */
+/** A genre plate: a small rounded tag in the genre's colour. */
 @Composable
 fun Plate(text: String, color: Color, modifier: Modifier = Modifier) {
-    Text(text, style = T.Small.copy(color = C.paper), modifier = modifier.pixelBox(color, bevel = null, lip = null).padding(horizontal = 8.dp, vertical = 3.dp))
+    val shape = RoundedCornerShape(6.dp)
+    Text(text, style = T.Tag.copy(color = Color.White), modifier = modifier.clip(shape).background(color, shape).padding(horizontal = 8.dp, vertical = 3.dp))
 }
 
 /** A status pill on tiles. */
 @Composable
 fun Pill(text: String, fill: Color, ink: Color) {
-    Text(text, style = T.Small.copy(color = ink), modifier = Modifier.background(fill).padding(horizontal = 6.dp, vertical = 1.dp), maxLines = 1)
+    val shape = RoundedCornerShape(6.dp)
+    Text(text, style = T.Tag.copy(color = ink), modifier = Modifier.clip(shape).background(fill, shape).padding(horizontal = 7.dp, vertical = 2.dp), maxLines = 1)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -187,41 +197,47 @@ fun BufImage(buf: Buf, modifier: Modifier = Modifier, scale: Dp = 2.dp, smooth: 
     }
 }
 
-/** A plain pixel text field. */
+/** A text field: a dark rounded well that lights its edge cyan while you type. */
 @Composable
 fun Field(value: String, onChange: (String) -> Unit, hint: String, modifier: Modifier = Modifier, style: TextStyle = T.Body, single: Boolean = true, onDone: (() -> Unit)? = null) {
-    BasicTextField(value, onChange, modifier.fillMaxWidth().pixelBox(C.paper), textStyle = style, singleLine = single, cursorBrush = SolidColor(C.ink),
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    BasicTextField(value, onChange, modifier.fillMaxWidth().surface(C.bgD, if (focused) C.neon else C.line, radius = SMALL_R), textStyle = style, singleLine = single, cursorBrush = SolidColor(C.neon),
+        interactionSource = interaction,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = if (onDone != null) ImeAction.Search else ImeAction.Default),
         keyboardActions = KeyboardActions(onSearch = { onDone?.invoke() }),
-        decorationBox = { inner -> Box(Modifier.padding(horizontal = 10.dp, vertical = 10.dp)) { if (value.isEmpty()) Text(hint, style = style.copy(color = C.muted)); inner() } })
+        decorationBox = { inner -> Box(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) { if (value.isEmpty()) Text(hint, style = style.copy(color = C.dim)); inner() } })
+}
+
+/** A small round icon button. */
+@Composable
+fun IconBtn(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = C.sub) {
+    Box(modifier.size(40.dp).clip(CircleShape).clickable(onClick = onClick).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+    }
 }
 
 /**
- * A paper sheet from the bottom over a dim layer: a grab bar and a close cross on top; tap outside,
+ * A sheet from the bottom over a dim layer: rounded top, a grab bar and a close cross; tap outside,
  * swipe down, or back closes it.
  */
 @Composable
 fun Sheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     BackHandler(onBack = onDismiss)
-    val closeLabel = stringResource(R.string.close)
-    Box(Modifier.fillMaxSize().background(Color(0xB0140A06)).clickable(remember { MutableInteractionSource() }, null, onClick = onDismiss).imePadding(), contentAlignment = Alignment.BottomCenter) {
+    val shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    Box(Modifier.fillMaxSize().background(Color(0xC007060F)).clickable(remember { MutableInteractionSource() }, null, onClick = onDismiss).imePadding(), contentAlignment = Alignment.BottomCenter) {
         Column(
             Modifier.fillMaxWidth().widthIn(max = 560.dp).heightIn(max = 760.dp)
-                .drawBehind { drawRect(C.paper); drawRect(C.ink, size = Size(size.width, PX.toPx())); drawRect(C.brass, Offset(0f, PX.toPx()), Size(size.width, 2 * PX.toPx())) }
+                .clip(shape).background(C.card, shape).border(1.dp, C.line, shape)
                 .clickable(remember { MutableInteractionSource() }, null) {}
                 .pointerInput(Unit) { var dy = 0f; detectVerticalDragGestures(onDragStart = { dy = 0f }, onDragEnd = { if (dy > 120) onDismiss() }) { _, d -> dy += d } }
                 .navigationBarsPadding(),
         ) {
             Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Box(Modifier.align(Alignment.TopCenter).width(48.dp).height(4.dp).background(C.paperD))
-                Box(Modifier.align(Alignment.TopEnd).padding(end = 6.dp).size(40.dp).clickable(onClick = onDismiss).semantics { contentDescription = closeLabel }, contentAlignment = Alignment.Center) {
-                    Canvas(Modifier.size(16.dp)) {
-                        val p = size.width / 8
-                        for (i in 0 until 8) { drawRect(C.muted, Offset(i * p, i * p), Size(p, p)); drawRect(C.muted, Offset((7 - i) * p, i * p), Size(p, p)) }
-                    }
-                }
+                Box(Modifier.align(Alignment.TopCenter).width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(C.line))
+                IconBtn(Icons.Rounded.Close, stringResource(R.string.close), onDismiss, Modifier.align(Alignment.TopEnd).padding(end = 6.dp))
             }
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+            Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
         }
     }
 }
@@ -230,21 +246,13 @@ fun Sheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun Page(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     BackHandler(onBack = onBack)
-    Column(Modifier.fillMaxSize().background(C.wood).clickable(remember { MutableInteractionSource() }, null) {}.imePadding()) {
-        Row(Modifier.fillMaxWidth().background(C.woodD).statusBarsPadding().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.size(20.dp)) {
-                    val p = size.width / 10
-                    for (i in 0 until 5) {
-                        drawRect(C.brass, Offset((1 + i) * p, (5 - i) * p - p / 2), Size(p * 2, p))
-                        drawRect(C.brass, Offset((1 + i) * p, (4 + i) * p + p / 2), Size(p * 2, p))
-                    }
-                }
-            }
+    Column(Modifier.fillMaxSize().background(C.bg).clickable(remember { MutableInteractionSource() }, null) {}.imePadding()) {
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBtn(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack, tint = C.text)
             Spacer(Modifier.width(4.dp))
-            Text(title, style = T.Title.copy(color = C.brass), modifier = Modifier.weight(1f), maxLines = 1)
+            Text(title, style = T.Title, modifier = Modifier.weight(1f), maxLines = 1)
         }
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp).navigationBarsPadding(),
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }
@@ -252,30 +260,27 @@ fun Page(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() 
 @Composable
 fun Gap(h: Dp = 8.dp) = Spacer(Modifier.height(h))
 
-/** A section label on wood. */
+/** A section label on the hall: bold, with a short neon dash before it. */
 @Composable
 fun Section(text: String, note: String? = null, modifier: Modifier = Modifier) {
-    Row(modifier.padding(top = 6.dp), verticalAlignment = Alignment.Bottom) {
-        Text(text, style = T.Heading.copy(color = C.brass))
-        if (note != null) Text("  $note", style = T.Small.copy(color = C.paperD))
+    Row(modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(width = 14.dp, height = 3.dp).clip(RoundedCornerShape(2.dp)).background(C.neon))
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = T.Heading)
+        if (note != null) Text("  $note", style = T.Small.copy(color = C.dim))
     }
 }
 
 fun Buf.toImage() = toBitmap().asImageBitmap()
 
-private val STAR = listOf("...#...", "..###..", "#######", ".#####.", "..###..", ".##.##.", ".#...#.")
-
-/** Five pixel stars; with [onRate] they're tappable, and tapping the current one clears it. */
+/** Five stars; with [onRate] they're tappable, and tapping the current one clears it. */
 @Composable
 fun Stars(rating: Int, modifier: Modifier = Modifier, size: Dp = 26.dp, onRate: ((Int) -> Unit)? = null) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(size / 6)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(size / 8)) {
         for (i in 1..5) {
             val on = i <= rating
-            Canvas(Modifier.size(size).then(if (onRate != null) Modifier.clickable { onRate(if (i == rating) 0 else i) } else Modifier)) {
-                val p = this.size.width / 7
-                STAR.forEachIndexed { y, row -> row.forEachIndexed { x, c -> if (c == '#') drawRect(if (on) C.brass else C.paperD, Offset(x * p, y * p), Size(p, p)) } }
-                if (on) { drawRect(C.brassL, Offset(3 * p, p), Size(p, p)); drawRect(C.brassL, Offset(2 * p, 2 * p), Size(p, p)); drawRect(C.brassD, Offset(4 * p, 4 * p), Size(p, p)) }
-            }
+            Icon(if (on) Icons.Rounded.Star else Icons.Rounded.StarOutline, null, tint = if (on) C.neon else C.line,
+                modifier = Modifier.size(size).then(if (onRate != null) Modifier.clickable { onRate(if (i == rating) 0 else i) } else Modifier))
         }
     }
 }

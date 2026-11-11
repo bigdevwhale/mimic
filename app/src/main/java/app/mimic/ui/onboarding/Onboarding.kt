@@ -50,17 +50,17 @@ fun Onboarding() {
     val tick = rememberTick()
     val traits = listOf(emptySet(), setOf(Trait.FANG, Trait.STRAW), setOf(Trait.SCROLL, Trait.DICE, Trait.PARTY))[page]
     val mimic = remember(page, tick % 30 < 2) { Buf(MimicArt.W, MimicArt.H).also { MimicArt.draw(MimicPose(page + 1, traits, blink = tick % 30 < 2), it) } }
-    Column(Modifier.fillMaxSize().background(C.wood).imePadding()) {
-        Text(stringResource(R.string.app_title), style = T.Display.copy(color = C.brass), modifier = Modifier.statusBarsPadding().padding(16.dp))
+    Column(Modifier.fillMaxSize().background(C.bg).imePadding()) {
+        Text(stringResource(R.string.app_title), style = T.Display.copy(color = C.neon), modifier = Modifier.statusBarsPadding().padding(16.dp))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { BufImage(mimic, scale = 3.dp) }
             when (page) {
-                0 -> { Says(stringResource(R.string.ob_1)); Text(stringResource(R.string.ob_1b), style = T.Body.copy(color = C.paper)) }
-                1 -> { Says(stringResource(R.string.ob_2)); Text(stringResource(R.string.ob_2b), style = T.Body.copy(color = C.paper)) }
+                0 -> { Says(stringResource(R.string.ob_1)); Text(stringResource(R.string.ob_1b), style = T.Body.copy(color = C.text)) }
+                1 -> { Says(stringResource(R.string.ob_2)); Text(stringResource(R.string.ob_2b), style = T.Body.copy(color = C.text)) }
                 else -> {
                     Says(stringResource(R.string.ob_3))
-                    Text(stringResource(R.string.ob_3b), style = T.Small.copy(color = C.paperD))
-                    town?.let { Text(stringResource(R.string.place_now, it), style = T.Body.copy(color = C.brass)) }
+                    Text(stringResource(R.string.ob_3b), style = T.Small.copy(color = C.sub))
+                    town?.let { Text(stringResource(R.string.place_now, it), style = T.Body.copy(color = C.neon)) }
                     PlacePicker { p -> town = p.name; c.write { settings.update { it.copy(place = p) }; refreshWeather(force = true) } }
                 }
             }

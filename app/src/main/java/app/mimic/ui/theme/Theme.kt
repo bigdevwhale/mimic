@@ -1,7 +1,7 @@
 package app.mimic.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
@@ -13,51 +13,74 @@ import androidx.compose.ui.unit.sp
 import app.mimic.R
 import app.mimic.data.Genre
 
-/** The room's own materials: dark wood, cream paper, brass plates and the crimson of the mimic's tongue. */
+/**
+ * A 90s home console: warm grey plastic, a dark bezel around the screen (the room), and the colours of
+ * the pad's face buttons for what you press. Pixels stay in the room and on its creatures only.
+ */
 @Immutable
 object C {
-    val wood = Color(0xFF4A2C1A)
-    val woodD = Color(0xFF2C180E)
-    val woodL = Color(0xFF6A4228)
-    val night = Color(0xFF140C08)
-    val ink = Color(0xFF2A160E)
-    val paper = Color(0xFFF6EAD0)
-    val paperD = Color(0xFFE2CFA6)
-    val note = Color(0xFFFFF8DC)
-    val muted = Color(0xFF80624A)
-    val brass = Color(0xFFE8B840)
-    val brassL = Color(0xFFFFF0A0)
-    val brassD = Color(0xFFA87418)
-    val crim = Color(0xFFC42C58)
-    val crimD = Color(0xFF7E1838)
-    val crimL = Color(0xFFF0708C)
-    val pile = Color(0xFF6A4A8A)
-    val done = Color(0xFF3A7A4A)
-    val away = Color(0xFF3A64B8)
+    /** The plastic, a deeper plastic for wells and trays, and a quiet control tone. */
+    val bg = Color(0xFFE4E2EA)
+    val bgD = Color(0xFFD7D4E0)
+    val bgL = Color(0xFFD0CCDB)
+    /** The dark bezel around the screen and the bar of tabs; light on it is [onBezel]. */
+    val bezel = Color(0xFF2E2A47)
+    val onBezel = Color(0xFFE4E2EA)
+    val night = Color(0xFF1C1A28)
+    /** Cards, a second card tone, and the hairlines and tracks on them. */
+    val card = Color(0xFFF7F6FA)
+    val card2 = Color(0xFFEFEDF5)
+    val line = Color(0xFFCFCBDB)
+    /** Text: main, secondary, and quiet labels. */
+    val text = Color(0xFF2A2638)
+    val sub = Color(0xFF6B6680)
+    val dim = Color(0xFF8E89A3)
+    /** The console's own violet: the main action and what's chosen. */
+    val neon = Color(0xFF5B4BB0)
+    val neonL = Color(0xFFA79BE0)
+    val neonD = Color(0xFF3F3291)
+    /** The red face button: the big moments (credits, the mimic's voice, sharing). */
+    val pink = Color(0xFFE0464B)
+    val pinkL = Color(0xFFF08A8D)
+    val pinkD = Color(0xFFA82A2F)
+    /** Lavender for the pile, the green button for finished, the blue one for lent. */
+    val pile = Color(0xFF8E74D0)
+    val done = Color(0xFF2F9E6A)
+    val away = Color(0xFF3C7BD9)
+    /** Ink on a lit button. */
+    val onNeon = Color.White
 
     fun genre(g: Genre) = Color(0xFF000000 or g.color)
 }
 
-/** m6x11 by Daniel Linssen with Cyrillic by Natto Games (free with attribution): one family, sizes set the hierarchy. */
-val Pixel = FontFamily(Font(R.font.m6x11, FontWeight.Normal))
+/** Nunito (SIL OFL) in five static weights: variable weights are ignored by some phones' font stacks. */
+val Read = FontFamily(
+    Font(R.font.nunito_medium, FontWeight.Medium), Font(R.font.nunito_semibold, FontWeight.SemiBold), Font(R.font.nunito_bold, FontWeight.Bold),
+    Font(R.font.nunito_extrabold, FontWeight.ExtraBold), Font(R.font.nunito_black, FontWeight.Black),
+)
 
 object T {
-    val Display = TextStyle(fontFamily = Pixel, fontSize = 32.sp, lineHeight = 31.sp, color = C.ink)
-    val Title = TextStyle(fontFamily = Pixel, fontSize = 27.sp, lineHeight = 27.sp, color = C.ink)
-    val Heading = TextStyle(fontFamily = Pixel, fontSize = 23.sp, lineHeight = 24.sp, color = C.ink)
-    val Body = TextStyle(fontFamily = Pixel, fontSize = 20.sp, lineHeight = 21.sp, color = C.ink)
-    val Say = TextStyle(fontFamily = Pixel, fontSize = 18.sp, lineHeight = 20.sp, color = C.ink)
-    val Small = TextStyle(fontFamily = Pixel, fontSize = 16.sp, lineHeight = 17.sp, color = C.muted)
-    val Button = TextStyle(fontFamily = Pixel, fontSize = 20.sp, lineHeight = 20.sp)
-    val Number = TextStyle(fontFamily = Pixel, fontSize = 32.sp, lineHeight = 30.sp, color = C.ink)
+    private val base = TextStyle(fontFamily = Read, fontWeight = FontWeight.Medium, color = C.text)
+    val Display = base.copy(fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+    val Title = base.copy(fontSize = 22.sp, lineHeight = 27.sp, fontWeight = FontWeight.ExtraBold)
+    val Heading = base.copy(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.ExtraBold)
+    val Body = base.copy(fontSize = 15.sp, lineHeight = 21.sp)
+    val Strong = Body.copy(fontWeight = FontWeight.Bold)
+    /** The mimic's voice. */
+    val Say = base.copy(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold)
+    val Small = base.copy(fontSize = 13.sp, lineHeight = 18.sp, color = C.sub)
+    /** Labels on chips, plates, counters and tabs. */
+    val Tag = base.copy(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = C.sub)
+    val Button = base.copy(fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.ExtraBold)
+    val Number = base.copy(fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.Black)
 }
 
 @Composable
 fun MimicTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = C.brass, onPrimary = C.ink, background = C.wood, surface = C.paper, onSurface = C.ink,
-            onBackground = C.paper, surfaceContainer = C.paper, outline = C.ink, error = C.crim,
+        colorScheme = lightColorScheme(
+            primary = C.neon, onPrimary = C.onNeon, background = C.bg, surface = C.card, onSurface = C.text,
+            onBackground = C.text, surfaceContainer = C.card, outline = C.line, error = C.pink,
         ),
         typography = MaterialTheme.typography.copy(bodyLarge = T.Body, bodyMedium = T.Body, bodySmall = T.Small, labelLarge = T.Button, titleLarge = T.Title),
         content = content,

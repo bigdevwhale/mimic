@@ -1,5 +1,20 @@
 package app.mimic.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.ViewModule
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import app.mimic.ui.components.IconBtn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,13 +50,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.mimic.R
+import app.mimic.ui.components.Tips
 import app.mimic.container
 import app.mimic.data.Draft
 import app.mimic.data.Settings
 import app.mimic.ru
 import app.mimic.ui.book.BookScreen
 import app.mimic.ui.chronicle.ChronicleScreen
-import app.mimic.ui.components.pixelBox
+import app.mimic.ui.postcard.Look
+import app.mimic.ui.postcard.PostcardScreen
+import app.mimic.ui.postcard.Subject
+import app.mimic.ui.components.surface
 import app.mimic.ui.onboarding.Onboarding
 import app.mimic.ui.room.RoomScreen
 import app.mimic.ui.settings.SettingsPage
@@ -65,6 +84,7 @@ sealed class Overlay {
     data class Add(val q: String = "") : Overlay()
     data class NewGame(val d: Draft, val cover: String?) : Overlay()
     data object Settings : Overlay()
+    data class Postcard(val subject: Subject, val look: Look = Look.NIGHT) : Overlay()
 }
 
 /** Ways screens move around. */
@@ -73,6 +93,7 @@ class Nav(val go: (Overlay?) -> Unit, val tab: (Tab, String?) -> Unit) {
     fun dig(id: Long?) = go(Overlay.Dig(id))
     fun sniff() = go(Overlay.Sniff)
     fun add() = go(Overlay.Add())
+    fun postcard(subject: Subject) = go(Overlay.Postcard(subject))
     fun close() = go(null)
     fun shelf(filter: String) = tab(Tab.SHELF, filter)
 }
@@ -99,18 +120,22 @@ fun MimicRoot(s: Settings, clock: Long? = null, tab0: Tab = Tab.ROOM, overlay0: 
     LaunchedEffect(Unit) { if (settingsOpen && overlay == null) overlay = Overlay.Settings }
     LaunchedEffect(overlay) { settingsOpen = overlay == Overlay.Settings }
     val nav = remember { Nav({ overlay = it }, { t, f -> tab = t; if (f != null) filter = f; overlay = null }) }
-    LaunchedEffect(Unit) { if (bus.said.first.isEmpty()) bus.say(ctx.getString(if (list.isEmpty()) R.string.say_hello_empty else R.string.say_hello)) }
+    LaunchedEffect(Unit) {
+        if (bus.said.first.isNotEmpty()) return@LaunchedEffect
+        if (!Tips.shown(s, Tips.ROOM)) { bus.say(ctx.getString(R.string.tip_room)); c.write { settings.meet(Tips.key(Tips.ROOM)) } }
+        else bus.say(ctx.getString(if (list.isEmpty()) R.string.say_hello_empty else R.string.say_hello))
+    }
 
     CompositionLocalProvider(LocalBus provides bus) {
-        Box(Modifier.fillMaxSize().background(C.wood)) {
+        Box(Modifier.fillMaxSize().background(C.bg)) {
             Column(Modifier.fillMaxSize()) {
                 Header(h, nav, onSettings = { overlay = Overlay.Settings })
                 Box(Modifier.weight(1f)) {
                     when (tab) {
                         Tab.ROOM -> RoomScreen(h, nav)
                         Tab.SHELF -> ShelfScreen(h, nav, filter) { filter = it }
-                        Tab.CHRONICLE -> ChronicleScreen(h)
-                        Tab.BOOK -> BookScreen(h)
+                        Tab.CHRONICLE -> ChronicleScreen(h, nav)
+                        Tab.BOOK -> BookScreen(h, nav)
                     }
                 }
                 TabBar(tab) { tab = it }
@@ -122,6 +147,7 @@ fun MimicRoot(s: Settings, clock: Long? = null, tab0: Tab = Tab.ROOM, overlay0: 
                 is Overlay.Add -> AddSheet(o.q, nav)
                 is Overlay.NewGame -> DraftSheet(h, o.d, o.cover, nav)
                 Overlay.Settings -> SettingsPage(s, nav)
+                is Overlay.Postcard -> PostcardScreen(h, o.subject, nav, o.look)
                 null -> Unit
             }
             Toast(Modifier.align(Alignment.TopCenter))
@@ -131,39 +157,40 @@ fun MimicRoot(s: Settings, clock: Long? = null, tab0: Tab = Tab.ROOM, overlay0: 
 
 @Composable
 private fun Header(h: Home, nav: Nav, onSettings: () -> Unit) {
-    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(R.string.app_title), style = T.Display.copy(color = C.brass), modifier = Modifier.weight(1f), maxLines = 1)
-        Counter(stringResource(R.string.ct_shelf), h.games.size - h.hands.size) { nav.shelf("all") }
-        Counter(stringResource(R.string.ct_pile), h.pile.size) { nav.shelf("pile") }
-        Counter(stringResource(R.string.ct_eaten), h.mimic.eaten) { nav.shelf("done") }
-        val label = stringResource(R.string.settings)
-        Box(Modifier.size(36.dp).background(C.woodD).clickable(onClick = onSettings).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
-            Canvas(Modifier.size(18.dp)) {
-                val p = size.width / 9
-                fun r(x: Int, y: Int, w: Int = 1, hh: Int = 1) = drawRect(C.brass, Offset(x * p, y * p), Size(w * p, hh * p))
-                r(1, 1, 7, 7); for ((x, y) in listOf(3 to 0, 5 to 0, 0 to 3, 0 to 5, 8 to 3, 8 to 5, 3 to 8, 5 to 8)) r(x, y)
-                drawRect(C.woodD, Offset(3 * p, 3 * p), Size(3 * p, 3 * p))
-                for ((x, y) in listOf(1 to 1, 7 to 1, 1 to 7, 7 to 7)) drawRect(C.woodD, Offset(x * p, y * p), Size(p, p))
-            }
-        }
+    Row(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.app_title), style = T.Display.copy(color = C.neon, letterSpacing = 2.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic), modifier = Modifier.weight(1f), maxLines = 1)
+        Counter(stringResource(R.string.ct_shelf), h.games.size - h.hands.size, C.neon) { nav.shelf("all") }
+        Counter(stringResource(R.string.ct_pile), h.pile.size, C.pile) { nav.shelf("pile") }
+        Counter(stringResource(R.string.ct_eaten), h.mimic.eaten, C.pink) { nav.shelf("done") }
+        IconBtn(Icons.Rounded.Settings, stringResource(R.string.settings), onSettings)
     }
 }
 
+/** A counter: the number in its neon over a quiet label. */
 @Composable
-private fun Counter(label: String, n: Int, onClick: () -> Unit) {
-    Row(Modifier.background(C.woodD).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp)) {
-        Text("$label ", style = T.Small.copy(color = C.paperD))
-        Text("$n", style = T.Small.copy(color = C.brass))
+private fun Counter(label: String, n: Int, color: Color, onClick: () -> Unit) {
+    Column(Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("$n", style = T.Heading.copy(color = color))
+        Text(label, style = T.Small.copy(fontSize = 11.sp, lineHeight = 13.sp, color = C.dim))
     }
 }
 
+/** The tabs on the console's dark body: an icon and a word, the chosen one lit lavender with a short bar on top. */
 @Composable
 private fun TabBar(tab: Tab, onTab: (Tab) -> Unit) {
-    Row(Modifier.fillMaxWidth().background(C.woodD).navigationBarsPadding().padding(vertical = 6.dp)) {
-        for ((t, l) in listOf(Tab.ROOM to R.string.tab_room, Tab.SHELF to R.string.tab_shelf, Tab.CHRONICLE to R.string.tab_chronicle, Tab.BOOK to R.string.tab_book)) {
+    Row(Modifier.fillMaxWidth().background(C.bezel).navigationBarsPadding()) {
+        for ((t, l, icon) in listOf(
+            Triple(Tab.ROOM, R.string.tab_room, Icons.Rounded.Home), Triple(Tab.SHELF, R.string.tab_shelf, Icons.Rounded.ViewModule),
+            Triple(Tab.CHRONICLE, R.string.tab_chronicle, Icons.Rounded.Insights), Triple(Tab.BOOK, R.string.tab_book, Icons.Rounded.Pets),
+        )) {
             val on = t == tab
-            Text((if (on) "▸" else "") + stringResource(l), style = T.Button.copy(color = if (on) C.brass else C.muted), textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).clickable { onTab(t) }.padding(vertical = 8.dp), maxLines = 1)
+            val color = if (on) C.neonL else C.dim
+            Column(Modifier.weight(1f).clickable { onTab(t) }.padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.size(width = 28.dp, height = 3.dp).clip(RoundedCornerShape(bottomStart = 3.dp, bottomEnd = 3.dp)).background(if (on) C.neonL else Color.Transparent))
+                Spacer(Modifier.height(7.dp))
+                Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
+                Text(stringResource(l), style = T.Tag.copy(color = color, fontSize = 12.sp), maxLines = 1)
+            }
         }
     }
 }
@@ -175,7 +202,7 @@ private fun Toast(modifier: Modifier) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(stamp) { if (text.isNotEmpty()) { shown = true; delay(3200); shown = false } }
     if (!shown || text.isEmpty()) return
-    Text(text, style = T.Small.copy(color = C.ink), modifier = modifier.statusBarsPadding().padding(top = 56.dp, start = 14.dp, end = 14.dp).fillMaxWidth()
-        .pixelBox(C.brass).padding(horizontal = 12.dp, vertical = 10.dp))
+    Text(text, style = T.Small.copy(color = C.text), modifier = modifier.statusBarsPadding().padding(top = 56.dp, start = 14.dp, end = 14.dp).fillMaxWidth()
+        .surface(C.neon).padding(horizontal = 12.dp, vertical = 10.dp))
 }
 

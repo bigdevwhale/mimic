@@ -26,7 +26,7 @@ data class Settings(
     /** Real weather in the window, or always fair. */
     val liveWeather: Boolean = true,
     /** Covers redrawn in pixels, or shown as they are on cards. */
-    val pixelCovers: Boolean = true,
+    val pixelCovers: Boolean = false,
     /** Creatures met, for the bestiary. */
     val seen: Set<String> = emptySet(),
 )
@@ -46,7 +46,7 @@ class SettingsStore(context: Context) {
             outside = if (at > 0) Outside(runCatching { Wx.valueOf(this[WX] ?: "") }.getOrDefault(Wx.CLEAR), this[TEMP]?.takeIf { it != Int.MIN_VALUE },
                 this[WIND] ?: 8.0, this[RISE] ?: 0, this[SET] ?: 0, at) else null,
             liveWeather = this[LIVE] ?: true,
-            pixelCovers = this[PIXEL] ?: true,
+            pixelCovers = this[PIXEL] ?: false,
             seen = this[SEEN]?.split(',')?.filter { it.isNotBlank() }?.toSet() ?: emptySet(),
         )
     }

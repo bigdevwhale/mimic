@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.mimic.R
+import app.mimic.ui.components.Tip
+import app.mimic.ui.components.Tips
 import app.mimic.container
 import app.mimic.data.Box
 import app.mimic.data.Catalog
@@ -61,7 +63,7 @@ import app.mimic.ui.components.Plate
 import app.mimic.ui.components.Says
 import app.mimic.ui.components.Sheet
 import app.mimic.ui.components.Stars
-import app.mimic.ui.components.pixelBox
+import app.mimic.ui.components.surface
 import app.mimic.ui.daysSince
 import app.mimic.ui.room.CoverImage
 import app.mimic.ui.theme.C
@@ -118,14 +120,15 @@ fun CardSheet(h: Home, g: Game, nav: Nav) {
     val draft = remember(g.id, step) { SessionDraft().also { if (step == Step.PUT_DOWN) it.note = g.note } }
     val picker = rememberCoverPicker { name -> val old = g.cover; c.write { shelf.save(g.copy(cover = name, color = Covers.art(app, name)?.dominant ?: g.color)); Covers.delete(app, old) } }
     Sheet(nav::close) {
+        if (step == Step.MAIN) Tip(Tips.CARD, h.s, stringResource(R.string.tip_card), Modifier.padding(bottom = 6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             CoverImage(g, h.s.pixelCovers, 3.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(g.title, style = T.Title)
                 val facts = listOfNotNull(g.year?.toString(), g.maker.ifBlank { null }, g.platform.ifBlank { null }, g.players.ifBlank { null }?.let { stringResource(R.string.players_n, it) })
                 if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = T.Small)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { GamePlate(h, g); Plate(stringResource(lengthName(g.length)), C.woodL) }
-                Text(statusLine(g, h.now), style = T.Small.copy(color = C.ink))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { GamePlate(h, g); Plate(stringResource(lengthName(g.length)), C.sub) }
+                Text(statusLine(g, h.now), style = T.Small.copy(color = C.text))
                 Text(stringResource(R.string.trait_line, h.genres.trait(g)?.let { stringResource(traitName(it)) } ?: stringResource(R.string.trait_none)), style = T.Small)
             }
         }
@@ -163,6 +166,7 @@ fun CardSheet(h: Home, g: Game, nav: Nav) {
                 }
                 if (g.status == Status.SHELF || g.status == Status.DONE) PixelButton(stringResource(R.string.lend), { step = Step.LEND }, kind = Btn.PALE)
                 if (g.status == Status.HANDS || g.status == Status.SHELF || g.status == Status.DONE) PixelButton(stringResource(R.string.s_add), { step = Step.SESSION }, kind = Btn.PALE)
+                PixelButton(stringResource(R.string.pc_title), { nav.postcard(app.mimic.ui.postcard.Subject.Game(g.id)) }, kind = Btn.BRASS, small = true)
                 PixelButton(stringResource(R.string.rate_btn), { step = Step.RATE }, kind = Btn.WOOD, small = true)
                 PixelButton(stringResource(R.string.genre_edit), { step = Step.GENRE }, kind = Btn.WOOD, small = true)
                 PixelButton(stringResource(R.string.cover_shoot), picker.shoot, kind = Btn.WOOD, small = true)
@@ -247,7 +251,7 @@ fun CardSheet(h: Home, g: Game, nav: Nav) {
             }
         }
         if (step == Step.MAIN && ss.isNotEmpty()) {
-            Text(stringResource(R.string.s_title, ss.size, minutesText(ss.sumOf { it.minutes }, ctx.ru)), style = T.Heading.copy(color = C.crim))
+            Text(stringResource(R.string.s_title, ss.size, minutesText(ss.sumOf { it.minutes }, ctx.ru)), style = T.Heading.copy(color = C.pink))
             SessionList(ss, { viewing = it }) { s -> c.write { shelf.unlog(s); Shots.delete(app, s.shotList) } }
         }
     }
@@ -258,8 +262,8 @@ fun CardSheet(h: Home, g: Game, nav: Nav) {
 @Composable
 fun Note(label: String, text: String, wisp: Boolean = false, tilt: Float = -1f) {
     Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Column(Modifier.fillMaxWidth().rotate(tilt).pixelBox(C.note, outline = C.paperD, bevel = null).padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Text(label, style = T.Small)
+        Column(Modifier.fillMaxWidth().surface(C.card2, outline = if (tilt < 0) C.neon.copy(alpha = .5f) else C.pink.copy(alpha = .5f)).padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(label, style = T.Tag.copy(color = if (tilt < 0) C.neon else C.pink))
             Text(text, style = T.Body)
         }
         if (wisp) BufImage(Critters.wisp(false), Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-16).dp), scale = 3.dp)
@@ -282,7 +286,7 @@ fun DigSheet(h: Home, id: Long?, nav: Nav) {
                 Text(stringResource(if (bottom) R.string.dig_bottom else R.string.dig_from), style = T.Small)
                 Text(g.title, style = T.Title)
                 GamePlate(h, g)
-                Text(stringResource(R.string.dig_lay, Plural.span(g.daysSince(g.added, h.now), ctx.ru)), style = T.Small.copy(color = C.ink))
+                Text(stringResource(R.string.dig_lay, Plural.span(g.daysSince(g.added, h.now), ctx.ru)), style = T.Small.copy(color = C.text))
             }
         }
         Says(stringResource(if (bottom) R.string.dig_say_bottom else R.string.dig_say))
@@ -311,15 +315,15 @@ fun SniffSheet(h: Home, nav: Nav) {
     Sheet(nav::close) {
         Text(stringResource(R.string.sniff), style = T.Title)
         Text(stringResource(R.string.sniff_sub), style = T.Small)
-        Text(stringResource(R.string.q_time), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.q_time), style = T.Small.copy(color = C.text))
         Flow { for ((v, l) in listOf(Mimic.Time.HALF to R.string.time_half, Mimic.Time.EVENING to R.string.time_evening, Mimic.Time.WEEKEND to R.string.time_weekend)) Chip(stringResource(l), time == v, { time = v; picked = null }) }
-        Text(stringResource(R.string.q_who), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.q_who), style = T.Small.copy(color = C.text))
         Flow { for ((v, l) in listOf(Mimic.Who.ONE to R.string.who_one, Mimic.Who.TWO to R.string.who_two, Mimic.Who.GROUP to R.string.who_group)) Chip(stringResource(l), who == v, { who = v; picked = null }) }
-        Text(stringResource(R.string.q_mood), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.q_mood), style = T.Small.copy(color = C.text))
         Flow { for ((v, l) in listOf(Mimic.Mood.HEAD to R.string.mood_head, Mimic.Mood.HANDS to R.string.mood_hands, Mimic.Mood.HEART to R.string.mood_heart)) Chip(stringResource(l), mood == v, { mood = v; picked = null }) }
         if (found.isEmpty()) Says(stringResource(if (h.pile.isEmpty()) R.string.say_pile_empty else R.string.sniff_none))
         for (g in found) {
-            Row(Modifier.fillMaxWidth().pixelBox(if (picked == g.id) Color0.pick else C.paper, outline = if (picked == g.id) C.crim else C.paperD, bevel = null).clickable { nav.dig(g.id) }.padding(8.dp),
+            Row(Modifier.fillMaxWidth().surface(if (picked == g.id) Color0.pick else C.card, outline = if (picked == g.id) C.pink else C.line, bevel = null).clickable { nav.dig(g.id) }.padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 CoverImage(g, h.s.pixelCovers, 1.dp)
                 Column(Modifier.weight(1f)) {
@@ -376,7 +380,7 @@ fun AddSheet(q0: String, nav: Nav) {
         }
         msg?.let { Text(stringResource(it), style = T.Small) }
         for (d in found) {
-            Row(Modifier.fillMaxWidth().pixelBox(C.paper, outline = C.paperD, bevel = null).clickable {
+            Row(Modifier.fillMaxWidth().surface(C.card, outline = C.line, bevel = null).clickable {
                 val name = d.coverUrl?.let { bytes[it] }?.let { Covers.save(ctx, it) }
                 nav.go(app.mimic.ui.Overlay.NewGame(d, name))
             }.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -423,12 +427,12 @@ fun DraftSheet(h: Home, d: Draft, cover0: String?, nav: Nav) {
                 Text(facts.joinToString(" · ").ifBlank { stringResource(kindName(d.kind)) }, style = T.Small)
             }
         }
-        Text(stringResource(R.string.f_box), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.f_box), style = T.Small.copy(color = C.text))
         Flow { for (b in Box.entries) Chip(stringResource(boxName(b)), box == b, { box = b }) }
         GenrePicker(h, d.kind, genre, preset, style) { gn, pr, st -> genre = gn; preset = pr; style = st }
-        Text(stringResource(R.string.f_length), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.f_length), style = T.Small.copy(color = C.text))
         Flow { for (l in Length.entries) Chip(stringResource(lengthName(l)), length == l, { length = l }) }
-        Text(stringResource(R.string.f_where), style = T.Small.copy(color = C.ink))
+        Text(stringResource(R.string.f_where), style = T.Small.copy(color = C.text))
         Flow { for ((s, l) in listOf(Status.PILE to R.string.to_pile_short, Status.SHELF to R.string.to_shelf_short, Status.HANDS to R.string.to_hands_short)) Chip(stringResource(l), where == s, { where = s }) }
         CoverButtons(picker)
         PixelButton(stringResource(R.string.add_do), {

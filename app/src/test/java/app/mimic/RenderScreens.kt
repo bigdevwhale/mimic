@@ -15,6 +15,9 @@ import app.mimic.ui.Tab
 import app.mimic.ui.art.Art
 import app.mimic.ui.onboarding.Onboarding
 import app.mimic.ui.theme.MimicTheme
+import app.mimic.ui.chronicle.Part
+import app.mimic.ui.postcard.Look
+import app.mimic.ui.postcard.Subject
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -61,7 +64,9 @@ abstract class ScreensBase {
         }
     }
 
-    private fun shot(name: String, content: @Composable () -> Unit) {
+    private fun shot(name: String, content: @Composable () -> Unit) = shot(out, name, content)
+
+    private fun shot(dir: File, name: String, content: @Composable () -> Unit) {
         rule.mainClock.autoAdvance = false
         rule.setContent { MimicTheme { content() } }
         // The demo store loads on a background thread; wait for the header before drawing.
@@ -74,7 +79,7 @@ abstract class ScreensBase {
             val view = rule.activity.window.decorView
             val image = android.graphics.Bitmap.createBitmap(view.width, view.height, android.graphics.Bitmap.Config.ARGB_8888)
             view.draw(android.graphics.Canvas(image))
-            File(out, "$name.png").outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            File(dir, "$name.png").outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
 
@@ -93,6 +98,38 @@ abstract class ScreensBase {
     @Test fun book() = screen("5-bestiary", Tab.BOOK)
     @Test fun sniff() = screen("6-sniff", Tab.ROOM) { Overlay.Sniff }
     @Test fun dig() = screen("7-dig", Tab.ROOM) { Overlay.Dig(null) }
+
+    /** Every postcard subject, each in a different dress, to app/build/art/postcards-<lang> (not the README). */
+    private fun card(n: Int, look: Look, subject: (Map<String, Long>) -> Subject) {
+        val (s, ids) = seed()
+        val dir = File(out.parentFile, "postcards-$lang").apply { mkdirs() }
+        shot(dir, "$n") { MimicRoot(s, evening, Tab.ROOM, Overlay.Postcard(subject(ids), look)) }
+    }
+    private val year get() = java.time.LocalDate.now().year
+
+    /** Each screen as a newcomer first sees it, with the mimic's hint, to app/build/art/tips-<lang> (not the README). */
+    private fun tip(name: String, tab: Tab, overlay: (Map<String, Long>) -> Overlay? = { null }) {
+        val (s0, ids) = seed()
+        val s = s0.copy(seen = s0.seen.filterNot { it.startsWith("tip:") }.toSet())
+        val dir = File(out.parentFile, "tips-$lang").apply { mkdirs() }
+        shot(dir, name) { MimicRoot(s, evening, tab, overlay(ids)) }
+    }
+
+    @Test fun tipShelf() = tip("shelf", Tab.SHELF)
+    @Test fun tipChronicle() = tip("chronicle", Tab.CHRONICLE)
+    @Test fun tipBook() = tip("book", Tab.BOOK)
+    @Test fun tipCard() = tip("card", Tab.ROOM) { Overlay.Card(it.like("Hades")) }
+    @Test fun tipPostcard() = tip("postcard", Tab.ROOM) { Overlay.Postcard(Subject.Room) }
+    @Test fun tipSettings() = tip("settings", Tab.ROOM) { Overlay.Settings }
+
+    @Test fun pcOverview() = card(0, Look.NIGHT) { Subject.Year(year, Part.OVERVIEW) }
+    @Test fun pcTime() = card(1, Look.PAPER) { Subject.Year(year, Part.TIME) }
+    @Test fun pcTaste() = card(2, Look.SUNSET) { Subject.Year(year, Part.TASTE) }
+    @Test fun pcPile() = card(3, Look.FOREST) { Subject.Year(year, Part.PILE) }
+    @Test fun pcGame() = card(4, Look.NIGHT) { Subject.Game(it.like("Ведьмак 3", "The Witcher 3")) }
+    @Test fun pcRoom() = card(5, Look.PAPER) { Subject.Room }
+    @Test fun pcMimic() = card(6, Look.SUNSET) { Subject.Mimic }
+    @Test fun pcCreature() = card(7, Look.FOREST) { Subject.Creature(app.mimic.ui.art.Critters.Kind.CROW) }
 }
 
 private val RU_EN = mapOf(

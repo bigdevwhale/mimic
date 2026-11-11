@@ -70,6 +70,23 @@ object DemoSeed {
             Triple(r("Каркассон", "Carcassonne"), 3, ""),
         )) byTitle[t]?.let { dao.update(it.copy(rating = stars, review = rev)) }
         for ((t, d, ms) in sessions) byTitle[t]?.let { dao.insertSession(Session(game = it.id, at = ago(d), minutes = ms.first, note = ms.second)) }
-        c.settings.update { it.copy(onboarded = true, place = Place(if (ru) "Москва" else "Moscow", "", 55.75, 37.62), seen = setOf("dice", "ghost")) }
+        // A year of quieter evenings around them, so the chronicle has something to show: each game in the weeks it was played.
+        val windows = listOf(
+            r("Ведьмак 3", "The Witcher 3") to 3..60, "Hades" to 1..40, "Disco Elysium" to 15..70, "Celeste" to 30..75,
+            "Slay the Spire" to 70..140, "Stardew Valley" to 160..240, "Hollow Knight" to 90..160, r("Кодовые имена", "Codenames") to 50..120,
+            "Resident Evil 4" to 200..290, r("Каркассон", "Carcassonne") to 120..200,
+        )
+        val rnd = java.util.Random(11)
+        val zone = java.time.ZoneId.systemDefault()
+        for (d in 1..320) {
+            val date = java.time.Instant.ofEpochMilli(ago(d)).atZone(zone).toLocalDate()
+            val weekend = date.dayOfWeek.value >= 6
+            if (rnd.nextInt(100) >= if (weekend) 55 else 22) continue
+            val (t, _) = windows.filter { d in it.second }.takeIf { it.isNotEmpty() }?.let { it[rnd.nextInt(it.size)] } ?: continue
+            val start = if (weekend) listOf(11, 15, 19, 21)[rnd.nextInt(4)] else listOf(19, 20, 21, 22, 23, 1)[rnd.nextInt(6)]
+            val min = listOf(30, 45, 60, 60, 90, 120, 150)[rnd.nextInt(7)]
+            byTitle[t]?.let { dao.insertSession(Session(game = it.id, at = date.atTime(start, 0).atZone(zone).toInstant().toEpochMilli(), minutes = min)) }
+        }
+        c.settings.update { it.copy(onboarded = true, place = Place(if (ru) "Москва" else "Moscow", "", 55.75, 37.62), seen = setOf("dice", "ghost") + app.mimic.ui.components.Tips.ALL.map(app.mimic.ui.components.Tips::key)) }
     }
 }

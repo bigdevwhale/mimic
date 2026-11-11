@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.mimic.R
+import app.mimic.ui.components.Tip
+import app.mimic.ui.components.Tips
 import app.mimic.data.Status
 import app.mimic.ui.Home
 import app.mimic.ui.Nav
@@ -46,9 +48,9 @@ fun statusName(s: Status) = when (s) {
     Status.DONE -> R.string.f_done; Status.AWAY -> R.string.f_away; Status.LET -> R.string.f_let
 }
 
-fun statusColors(s: Status) = when (s) {
-    Status.HANDS -> C.brass to C.ink; Status.SHELF -> C.muted to C.paper; Status.PILE -> C.pile to C.paper
-    Status.DONE -> C.done to C.paper; Status.AWAY -> C.away to C.paper; Status.LET -> C.woodL to C.paperD
+fun statusColors(s: Status): Pair<androidx.compose.ui.graphics.Color, androidx.compose.ui.graphics.Color> {
+    val c = when (s) { Status.HANDS -> C.neon; Status.SHELF -> C.sub; Status.PILE -> C.pile; Status.DONE -> C.done; Status.AWAY -> C.away; Status.LET -> C.dim }
+    return c.copy(alpha = .16f) to c
 }
 
 private enum class Sort { NEW, NAME, GENRE, RATING }
@@ -67,21 +69,22 @@ fun ShelfScreen(h: Home, nav: Nav, filter: String, onFilter: (String) -> Unit) {
     LazyVerticalGrid(GridCells.Fixed(3), Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = { GridItemSpan(3) }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Tip(Tips.SHELF, h.s, stringResource(R.string.tip_shelf))
                 Field(q, { q = it }, stringResource(R.string.find))
                 Flow {
                     Chip(stringResource(R.string.f_all, h.games.size), filter == "all", { onFilter("all") }, dark = true)
                     for (s in order) if (counts[s]!! > 0 || filter == s.name.lowercase()) Chip(stringResource(statusName(s)) + " " + counts[s], filter == s.name.lowercase(), { onFilter(s.name.lowercase()) }, dark = true)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.order), style = T.Small.copy(color = C.paperD))
+                    Text(stringResource(R.string.order), style = T.Tag.copy(color = C.sub))
                     for ((s, l) in listOf(Sort.NEW to R.string.sort_new, Sort.NAME to R.string.sort_name, Sort.GENRE to R.string.sort_genre, Sort.RATING to R.string.sort_rating))
-                        Text(stringResource(l), style = T.Small.copy(color = if (sort == s) C.brass else C.paperD), modifier = Modifier.clickable { sort = s }.padding(vertical = 6.dp))
+                        Text(stringResource(l), style = T.Tag.copy(color = if (sort == s) C.neon else C.sub), modifier = Modifier.clickable { sort = s }.padding(vertical = 6.dp))
                 }
             }
         }
         if (list.isEmpty()) item(span = { GridItemSpan(3) }) {
             Column(Modifier.fillMaxWidth().padding(vertical = 30.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(if (q.isNotBlank()) stringResource(R.string.find_none, q) else stringResource(R.string.shelf_empty), style = T.Body.copy(color = C.paperD), textAlign = TextAlign.Center)
+                Text(if (q.isNotBlank()) stringResource(R.string.find_none, q) else stringResource(R.string.shelf_empty), style = T.Body.copy(color = C.sub), textAlign = TextAlign.Center)
                 PixelButton(stringResource(R.string.add_game), { nav.go(Overlay.Add(q)) })
             }
         }
@@ -89,11 +92,11 @@ fun ShelfScreen(h: Home, nav: Nav, filter: String, onFilter: (String) -> Unit) {
             Column(Modifier.tray().clickable { if (g.status == Status.PILE) nav.dig(g.id) else nav.card(g.id) }.padding(horizontal = 4.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box { CoverImage(g, h.s.pixelCovers, 1.5.dp) }
-                Text(g.title, style = T.Small.copy(color = C.paper), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(g.title, style = T.Tag.copy(color = C.text), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val (bg, fg) = statusColors(g.status)
                 Pill(stringResource(statusName(g.status)), bg, fg)
                 if (g.rating > 0) app.mimic.ui.components.Stars(g.rating, size = 11.dp)
-                if (sort == Sort.GENRE) Text(h.genres.name(g, h.ru) ?: stringResource(genreName(g.genre)), style = T.Small.copy(color = C.paperD))
+                if (sort == Sort.GENRE) Text(h.genres.name(g, h.ru) ?: stringResource(genreName(g.genre)), style = T.Tag.copy(color = C.sub))
             }
         }
     }
